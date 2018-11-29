@@ -24,16 +24,44 @@ class client(object):
 
         create_deployment(task_info)
 
-    def delete(self, name):
+    def delete(self, name, namespace):
         """
-
             :param name: deploy_name
+            {
+                namespace: "default"
+                name: "redis"
+            }
             :return:
         """
         task_info = {}
         task_info['deploy_name'] = name
+        task_info['namespace'] = namespace
 
         delete_deployment(task_info)
+
+    def get_deployments(self, namespace):
+        """
+            :param namespace: get_namespaced_deployments_info
+            {
+                namespace: "default"
+            }
+            :return:
+        """
+        task_info = {}
+        task_info['namespace'] = namespace
+
+        resp = get_deployments_info(task_info)
+        print(resp)
+
+    def get_deployments(self):
+        """
+            :param namespace: get_deployments_info_for_all_namespace, none args needed for this query
+            :return:
+        """
+        task_info = {}
+        resp = get_deployments_info(task_info)
+        print(resp)
+
 
 if __name__ == '__main__':
     fire.Fire(client)

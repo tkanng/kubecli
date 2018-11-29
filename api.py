@@ -42,5 +42,18 @@ def delete_deployment(task_info):
     except ApiException as e:
         print(e)
 
+def get_deployments_info(task_info):
+    namespace = task_info.get('namespace')
+
+    try:
+        if namespace == None:
+            api_response = extensions_v1beta1.list_deployment_for_all_namespaces()
+            return  api_response
+        else:
+            api_response = extensions_v1beta1.list_namespaced_deployment(namespace)
+            return api_response
+    except ApiException as e:
+        print(e)
+
 
 
