@@ -24,6 +24,16 @@ class client(object):
 
         create_deployment(task_info)
 
+    def delete(self, name):
+        """
+
+            :param name: deploy_name
+            :return:
+        """
+        task_info = {}
+        task_info['deploy_name'] = name
+
+        delete_deployment(task_info)
 
 if __name__ == '__main__':
     fire.Fire(client)

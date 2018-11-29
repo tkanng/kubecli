@@ -30,11 +30,11 @@ def create_deployment(task_info):
     except ApiException as e:
         print(e)
 
-def delete_deployment(DEPLOYMENT_NAME):
+def delete_deployment(task_info):
     # Delete deployment
     try:
         api_response = extensions_v1beta1.delete_namespaced_deployment(
-            name=DEPLOYMENT_NAME,
+            name=task_info.get('deploy_name'),
             namespace="default",
             body=client.V1DeleteOptions(
                 propagation_policy='Foreground',
