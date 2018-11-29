@@ -27,6 +27,3 @@ class client(object):
 
 if __name__ == '__main__':
     fire.Fire(client)
-
-#submit
-#python app.py submit --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis
