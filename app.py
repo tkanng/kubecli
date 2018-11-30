@@ -84,5 +84,30 @@ class client(object):
         resp = get_deployment_info(task_info)
         print(resp)
 
+    def update_deployment(self, namespace, name, image, resource, replicas):
+        """
+          :param task_info: a dict representing the detail of a task, e.g.
+               {
+                   namespace: "default"
+                   image: "redis",
+                   resource: {
+                       cpu: 2000m,
+                       gpu: 2000m,
+                       mem: 2Gi
+                   },
+                   replicas: 3
+               }
+        """
+        task_info = {}
+        task_info['namespace'] = namespace
+        task_info['name'] = name
+        task_info['image'] = image
+        task_info['resource'] = resource
+        task_info['replicas'] = replicas
+
+        resp = replace_deployment(task_info)
+        print(resp)
+
+
 if __name__ == '__main__':
     fire.Fire(client)

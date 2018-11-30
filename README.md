@@ -4,8 +4,10 @@ submit and create a deployment for k8s
   
     :param task_info: a dict representing the detail of a task, e.g.
        {
+           name: "redis"
            namespace: "default"
            image: "redis",   # required
+           replicas: 3
            resource: {
                cpu: 2000m,
                gpu: 2000m,
@@ -46,3 +48,21 @@ get one deployment info
     :command
         get_deployment --namespace=default --name=redis
      
+
+update a deployment for k8s 
+
+  
+    :param task_info: a dict representing the detail of a task, e.g.
+       {
+           name: "redis"
+           namespace: "default"
+           image: "redis",   # required
+           replicas: 3
+           resource: {
+               cpu: 2000m,
+               gpu: 2000m,
+               mem: 2Gi
+           }
+       },
+    :command
+        update deployment --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis --replicas=2
