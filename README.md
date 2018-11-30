@@ -10,9 +10,10 @@ submit and create a deployment for k8s
                cpu: 2000m,
                gpu: 2000m,
                mem: 2Gi
+           }
        },
     :command
-        submit --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis
+        submit --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis --replicas=3
 
 
 delete a deployment for k8s
@@ -25,12 +26,23 @@ delete a deployment for k8s
     :command
         delete --name=redis --namespace=default
         
-get deployment info
+get deployments info
 
     :param namespace: deploy_name
     {
-        namespace: "default" (None for all namespace)
+        namespace: "default" (not required, None for all namespace)
     },
     :command
         get_deployments --namespace=default
         get_deployments
+
+get one deployment info
+
+    :param namespace: deploy_name
+    {
+        name: "redis"
+        namespace: "default" 
+    },
+    :command
+        get_deployment --namespace=default --name=redis
+     

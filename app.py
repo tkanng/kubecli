@@ -4,25 +4,29 @@ from api import *
 class client(object):
 
 
-    def submit(self, namespace, name, image, resource):
+    def submit(self, namespace, name, image, resource, replicas):
         """
           :param task_info: a dict representing the detail of a task, e.g.
                {
                    namespace: "default"
-                   image: "redis",   # required
+                   image: "redis",
                    resource: {
                        cpu: 2000m,
                        gpu: 2000m,
                        mem: 2Gi
                    },
+                   replicas: 3
+               }
         """
         task_info = {}
         task_info['namespace'] = namespace
         task_info['name'] = name
         task_info['image'] = image
         task_info['resource'] = resource
+        task_info['replicas'] = replicas
 
-        create_deployment(task_info)
+        resp = create_deployment(task_info)
+        print(resp)
 
     def delete(self, name, namespace):
         """
@@ -34,10 +38,11 @@ class client(object):
             :return:
         """
         task_info = {}
-        task_info['deploy_name'] = name
+        task_info['name'] = name
         task_info['namespace'] = namespace
 
-        delete_deployment(task_info)
+        resp = delete_deployment(task_info)
+        print(resp)
 
     def get_deployments(self, namespace):
         """
@@ -57,11 +62,27 @@ class client(object):
         """
             :param namespace: get_deployments_info_for_all_namespace, none args needed for this query
             :return:
+            {
+                ...
+            }
         """
         task_info = {}
         resp = get_deployments_info(task_info)
         print(resp)
 
+    def get_deployment(self, name, namespace):
+        """
+            :param name namespace: get one deployment
+            :return:
+            {
+                ...
+            }
+        """
+        task_info = {}
+        task_info['name'] = name
+        task_info['namespace'] = namespace
+        resp = get_deployment_info(task_info)
+        print(resp)
 
 if __name__ == '__main__':
     fire.Fire(client)
