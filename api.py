@@ -3,6 +3,7 @@ from kubernetes.client.rest import ApiException
 
 config.load_kube_config("./config.yaml")
 extensions_v1beta1 = client.ExtensionsV1beta1Api()
+core_v1 = client.CoreV1Api()
 
 def create_deployment(task_info):
     name = task_info.get('name')
@@ -114,4 +115,9 @@ def replace_deployment(task_info):
         print(e)
 
 
-
+def list_node():
+    try:
+        api_response = core_v1.list_node()
+        return api_response
+    except ApiException as e:
+        print(e);

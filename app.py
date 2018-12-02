@@ -10,12 +10,12 @@ class client(object):
                {
                    namespace: "default"
                    image: "redis",
+                   replicas: 3
                    resource: {
                        cpu: 2000m,
                        gpu: 2000m,
                        mem: 2Gi
                    },
-                   replicas: 3
                }
         """
         task_info = {}
@@ -75,7 +75,8 @@ class client(object):
             :param name namespace: get one deployment
             :return:
             {
-                ...
+                name: "redis"
+                namespace: "default"
             }
         """
         task_info = {}
@@ -90,12 +91,12 @@ class client(object):
                {
                    namespace: "default"
                    image: "redis",
+                   replicas: 3
                    resource: {
                        cpu: 2000m,
                        gpu: 2000m,
                        mem: 2Gi
                    },
-                   replicas: 3
                }
         """
         task_info = {}
@@ -108,6 +109,9 @@ class client(object):
         resp = replace_deployment(task_info)
         print(resp)
 
+    def list_node(self):
+        resp = list_node()
+        print(resp)
 
 if __name__ == '__main__':
     fire.Fire(client)

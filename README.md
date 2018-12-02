@@ -65,4 +65,12 @@ update a deployment for k8s
            }
        },
     :command
-        update deployment --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis --replicas=2
+        update_deployment --namespace=default --resource='{"cpu":"100m", "memory":"1Gi"}'  --name=redis --image=redis --replicas=2
+
+get k8s node info
+
+    :param : no args needed
+           
+    :command
+        list_node
+           
