@@ -1,21 +1,38 @@
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+import os
 
-config.load_kube_config("./config.yaml")
+config.load_kube_config()
 extensions_v1beta1 = client.ExtensionsV1beta1Api()
 core_v1 = client.CoreV1Api()
 
+
+gpu_name = "nvidia.com/gpu"
+gpu_memory_name = "nvidia.com/gpu-memory"
+
+shared_gpu_name = "nvidia.com/shared-gpu"
+exclusive_gpu_name = "nvidia.com/exclusive-gpu"
+gpu_free_memory_name = "nvidia.com/gpu-free-memory"
+shared_gpu_memory_name = "nvidia.com/shared-gpu-memory"
+shared_gpu_free_memory_name = "nvidia.com/shared-gpu-free-memory"
+
+memory_name = "memory"
+cpu_name = "cpu"
+
+
+# extensionsV1beta1Api
 def create_deployment(task_info):
     name = task_info.get('name')
     image = task_info.get('image')
     replicas = task_info.get('replicas')
     namespace = task_info.get('namespace')
-
+    resource = task_info.get("resource")
     # Configureate Pod template container
     container = client.V1Container(
         name = name,
         image = image,
-        ports = [client.V1ContainerPort(container_port = 80)])
+        ports = [client.V1ContainerPort(container_port = 80)],
+        resources=resource)
 
     # Create and configurate a spec section
     template = client.V1PodTemplateSpec(
@@ -114,10 +131,97 @@ def replace_deployment(task_info):
     except ApiException as e:
         print(e)
 
-
+## Core Api
 def list_node():
     try:
         api_response = core_v1.list_node()
         return api_response
     except ApiException as e:
-        print(e);
+        print(e)
+
+def list_node_requested_resources():
+    # cpu, gpu unit 1
+    # memory, gpu memory unit Ki M or G
+    try:
+        nodes = core_v1.list_node()
+        requested  = []
+        delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
+        memory_list = []
+
+        # get gpu_info (gpu, shared-gpu, exclusive-gpu, gpu-memory)
+        # for item in nodes.items:
+        #     r = item.status.allocatable
+        #     for k in delete_key_list:
+        #         if k in r:
+        #             del r[k]
+        #     a = {}
+        #     a["node_name"] = item.metadata.name
+        #     a["resources"] = r
+        #     allocatable.append(a)
+        
+        # get cpu and memory info
+
+        for item in nodes.item:
+            node_name = item.metadata.name
+            podList = list_node_pod(node_name)
+            for pod in podList.items:
+                containers = pod.spec.containers
+                for c in containers:
+                    resources_limits = c.resources.limits  # type: dict(str, str)
+
+
+
+
+    except ApiException as e:
+        print(e)
+
+
+
+
+
+
+
+def list_node_allocatable_resources():
+    try:
+        nodes = core_v1.list_node()
+        allocatable = []
+        delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
+        for item in nodes.items:
+            r = item.status.allocatable
+            for k in delete_key_list:
+                if k in r:
+                    del r[k]
+            a = {}
+            a["node_name"] = item.metadata.name
+            a["resources"] = r
+            allocatable.append(a)
+        return allocatable
+    except ApiException as e:
+        print(e)
+
+
+def list_node_pod(node_name):
+    field_selector = "spec.nodeName="+node_name
+    try:
+        res = core_v1.list_pod_for_all_namespaces(include_uninitialized=True, field_selector=field_selector)
+        return res
+    except ApiException as e:
+        print(e)
+
+
+def list_deployment_pod(namespace, deployment_name):
+    label_selector = 'app='+deployment_name
+    try:
+        res = core_v1.list_namespaced_pod(namespace=namespace, include_uninitialized=True, label_selector= label_selector)
+        return res
+    except ApiException as e:
+        print(e)
+
+def read_namespaced_pod_log():
+    # TODO
+    return
+
+# Get container tty
+def get_container_tty(namespace, pod, container=None):
+    command = "kubectl -n {namespace} exec -it {pod}  {contianer} /bin/bash".format(namespace=namespace, pod=pod, container="" if container==None else "-c "+container)
+    os.system(command)
