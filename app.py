@@ -111,16 +111,14 @@ class Tclient(object):
     def list_node_pod(self, node_name):
         resp = list_node_pod(node_name)
         print(resp)
-        
-    # def list_node_resources_usage(self):
-    #     '''
-
-    #     '''
 
     def list_node_allocatable_resources(self):
         resp = list_node_allocatable_resources()
         print(resp)
-
+    
+    def list_node_allocated_resources(self):
+        resp = list_node_allocated_resources()
+        print(resp)
     def list_deployment_pod(self, namespace, deployment_name):
         return list_deployment_pod(namespace, deployment_name)
 
@@ -147,13 +145,16 @@ if __name__ == '__main__':
         # tclient.submit(namespace,deploymentName,containers[0].get("image"),containers[0].get("resources"),replicas)
         # print("*"*100)
         # tclient.list_deployment_pod(namespace, deploymentName)
-        print("*"*100)
+        
         # res = tclient.list_deployment_pod_name(namespace, deploymentName)
         # print(res)
         # res = tclient.list_node_pod('tusimple')
         # print(res)
-
+        #tclient.list_node_allocatable_resources()
+        print("*"*100)
         tclient.list_node_allocatable_resources()
+        print("*"*100)
+        tclient.list_node_allocated_resources()
         # print("Sleep 30s")
         # time.sleep(30)
         # print("Updating deployment")

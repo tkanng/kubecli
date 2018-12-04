@@ -1,6 +1,7 @@
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 import os
+import util
 
 config.load_kube_config()
 extensions_v1beta1 = client.ExtensionsV1beta1Api()
@@ -21,6 +22,9 @@ cpu_name = "cpu"
 
 
 # extensionsV1beta1Api
+
+
+# Tips: Deployment's pod only included 1 container
 def create_deployment(task_info):
     name = task_info.get('name')
     image = task_info.get('image')
@@ -28,13 +32,14 @@ def create_deployment(task_info):
     namespace = task_info.get('namespace')
     resource = task_info.get("resource")
     # Configureate Pod template container
+    # Container's name equals deployment's name
     container = client.V1Container(
         name = name,
         image = image,
         ports = [client.V1ContainerPort(container_port = 80)],
         resources=resource)
-
     # Create and configurate a spec section
+    # Pod's name equals deployment's name
     template = client.V1PodTemplateSpec(
         metadata=client.V1ObjectMeta(labels={"app": task_info.get('name')}),
         spec=client.V1PodSpec(containers=[container]))
@@ -88,7 +93,6 @@ def get_deployments_info(task_info):
 def get_deployment_info(task_info):
     name = task_info.get('name')
     namespace = task_info.get('namespace')
-
     try:
         api_response = extensions_v1beta1.read_namespaced_deployment(name = name, namespace = namespace)
         return api_response
@@ -131,7 +135,16 @@ def replace_deployment(task_info):
     except ApiException as e:
         print(e)
 
+
+
 ## Core Api
+def get_pod_info(name, namespace):
+    '''
+    return: V1Pod
+    '''
+    res = core_v1.read_namespaced_pod(name, namespace)
+    return res
+
 def list_node():
     try:
         api_response = core_v1.list_node()
@@ -139,62 +152,67 @@ def list_node():
     except ApiException as e:
         print(e)
 
-def list_node_requested_resources():
-    # cpu, gpu unit 1
-    # memory, gpu memory unit Ki M or G
+
+def list_node_allocated_resources():
+    '''
+    :return: dict(str(node_name), dict(resource_info))
+    {'tusimple': {u'nvidia.com/gpu-memory': 0, u'nvidia.com/shared-gpu': 3, 'current_shared_physical_gpu': 3, 'current_used_gpu_memory': 0, 'current_exclusive_physical_gpu': 0}}
+    '''
     try:
         nodes = core_v1.list_node()
-        requested  = []
-        delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
-        memory_list = []
-
-        # get gpu_info (gpu, shared-gpu, exclusive-gpu, gpu-memory)
-        # for item in nodes.items:
-        #     r = item.status.allocatable
-        #     for k in delete_key_list:
-        #         if k in r:
-        #             del r[k]
-        #     a = {}
-        #     a["node_name"] = item.metadata.name
-        #     a["resources"] = r
-        #     allocatable.append(a)
-        
-        # get cpu and memory info
-
-        for item in nodes.item:
+        allocated  = {}
+        delete_key_list = [gpu_name,shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
+        for item in nodes.items:
+            one_allocated={}
             node_name = item.metadata.name
             podList = list_node_pod(node_name)
             for pod in podList.items:
                 containers = pod.spec.containers
                 for c in containers:
                     resources_limits = c.resources.limits  # type: dict(str, str)
-
-
-
+                    for k in resources_limits:
+                        if one_allocated.get(k)!=None:
+                            one_allocated[k] = one_allocated[k] + util.convert_str_to_num(resources_limits[k])
+                        else:
+                            one_allocated[k] = util.convert_str_to_num(resources_limits[k])
+            r = item.status.allocatable
+            physical_gpu = int(r[gpu_name]) if r.get(gpu_name)!=None else 0
+            exclusive_gpu_allocatable = int(r[exclusive_gpu_name]) if r.get(exclusive_gpu_name)!=None else 0
+            shared_gpu_allocatable = int(r[shared_gpu_name]) if r.get(shared_gpu_name) !=None else 0
+            gpu_memory_capacity = util.convert_str_to_num(r[gpu_memory_name]) if r.get(gpu_memory_name)!=None else 0
+            gpu_free_memory = util.convert_str_to_num(r[gpu_free_memory_name]) if r.get(gpu_free_memory_name)!=None else 0
+            # physical gpu num
+            current_shared_gpu_num = shared_gpu_allocatable - exclusive_gpu_allocatable
+            current_exclusive_gpu_num = physical_gpu - exclusive_gpu_allocatable -current_shared_gpu_num
+            # used gpu memory
+            current_used_gpu_memory = gpu_memory_capacity - gpu_free_memory
+            one_allocated["current_shared_physical_gpu"] = current_shared_gpu_num
+            one_allocated["current_exclusive_physical_gpu"] = current_exclusive_gpu_num
+            one_allocated["current_used_gpu_memory"] = current_used_gpu_memory
+            allocated[node_name] = one_allocated
+        return allocated
 
     except ApiException as e:
         print(e)
 
-
-
-
-
-
-
+# return dict{k:node_name, v:dict{}}
 def list_node_allocatable_resources():
+    '''
+    :return: dict(str(node_name), dict(resource_info))
+    {'tusimple': {u'ephemeral-storage': 37925506191, u'hugepages-1Gi': 0, u'tusimple.com/shared-cpu': 0, u'nvidia.com/gpu': 8, u'nvidia.com/gpu-memory': 93767860224, u'hugepages-2Mi': 0, u'tusimple.com/exclusive-cpu': 0, u'memory': 236562677760, u'GPU': 8, u'GPUMemory': 93767860224, u'pods': 110, u'cpu': 56}}
+    '''
     try:
         nodes = core_v1.list_node()
-        allocatable = []
+        allocatable = {}
         delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
         for item in nodes.items:
             r = item.status.allocatable
             for k in delete_key_list:
                 if k in r:
                     del r[k]
-            a = {}
-            a["node_name"] = item.metadata.name
-            a["resources"] = r
-            allocatable.append(a)
+            for k in r:
+               r[k] = util.convert_str_to_num(r[k])  # Convert quantity str to num 
+            allocatable[item.metadata.name] = r
         return allocatable
     except ApiException as e:
         print(e)
@@ -210,16 +228,13 @@ def list_node_pod(node_name):
 
 
 def list_deployment_pod(namespace, deployment_name):
+    # make sure that pod's label equals deployment name   
     label_selector = 'app='+deployment_name
     try:
         res = core_v1.list_namespaced_pod(namespace=namespace, include_uninitialized=True, label_selector= label_selector)
         return res
     except ApiException as e:
         print(e)
-
-def read_namespaced_pod_log():
-    # TODO
-    return
 
 # Get container tty
 def get_container_tty(namespace, pod, container=None):
