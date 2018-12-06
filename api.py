@@ -19,11 +19,12 @@ shared_gpu_free_memory_name = "nvidia.com/shared-gpu-free-memory"
 
 memory_name = "memory"
 cpu_name = "cpu"
+gpu_devices_name = "nvidia.com/gpu-devices"
 
+shared_cpu_name ='tusimple.com/shared-cpu'
+exclusive_cpu_name = "tusimple.com/exclusive-cpu"
 
 # extensionsV1beta1Api
-
-
 # Tips: Deployment's pod only included 1 container
 def create_deployment(task_info):
     name = task_info.get('name')
@@ -48,18 +49,15 @@ def create_deployment(task_info):
     spec = client.ExtensionsV1beta1DeploymentSpec(
         replicas = replicas,
         template = template)
-
     # Instantiate the deployment object
     deployment = client.ExtensionsV1beta1Deployment(
         api_version="extensions/v1beta1",
         kind="Deployment",
         metadata=client.V1ObjectMeta(name = name),
         spec=spec)
-
     try:
         api_response = extensions_v1beta1.create_namespaced_deployment(namespace = namespace, body=deployment)
         return api_response
-
     except ApiException as e:
         print(e)
 
@@ -97,8 +95,12 @@ def get_deployment_info(task_info):
         api_response = extensions_v1beta1.read_namespaced_deployment(name = name, namespace = namespace)
         return api_response
     except ApiException as e:
-        print(e)
-
+        if str(e.status) == "404" and e.reason =="Not Found":
+            print("Deployment " + name + " not found.")
+            return None
+        else:
+            print(e)
+        
 def replace_deployment(task_info):
     name = task_info.get('name')
     image = task_info.get('image')
@@ -161,7 +163,6 @@ def list_node_allocated_resources():
     try:
         nodes = core_v1.list_node()
         allocated  = {}
-        delete_key_list = [gpu_name,shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
         for item in nodes.items:
             one_allocated={}
             node_name = item.metadata.name
@@ -183,11 +184,10 @@ def list_node_allocated_resources():
             gpu_free_memory = util.convert_str_to_num(r[gpu_free_memory_name]) if r.get(gpu_free_memory_name)!=None else 0
             # physical gpu num
             current_shared_gpu_num = shared_gpu_allocatable - exclusive_gpu_allocatable
-            current_exclusive_gpu_num = physical_gpu - exclusive_gpu_allocatable -current_shared_gpu_num
             # used gpu memory
             current_used_gpu_memory = gpu_memory_capacity - gpu_free_memory
             one_allocated["current_shared_physical_gpu"] = current_shared_gpu_num
-            one_allocated["current_exclusive_physical_gpu"] = current_exclusive_gpu_num
+            one_allocated["current_exclusive_physical_gpu"] = one_allocated[exclusive_gpu_name] if one_allocated.get(exclusive_gpu_name)!=None else 0
             one_allocated["current_used_gpu_memory"] = current_used_gpu_memory
             allocated[node_name] = one_allocated
         return allocated
@@ -204,7 +204,7 @@ def list_node_allocatable_resources():
     try:
         nodes = core_v1.list_node()
         allocatable = {}
-        delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name]
+        delete_key_list = [shared_gpu_name,exclusive_gpu_name,gpu_free_memory_name,shared_gpu_memory_name,shared_gpu_free_memory_name,shared_cpu_name,exclusive_cpu_name,"GPU","GPUMemory"]
         for item in nodes.items:
             r = item.status.allocatable
             for k in delete_key_list:
@@ -212,6 +212,12 @@ def list_node_allocatable_resources():
                     del r[k]
             for k in r:
                r[k] = util.convert_str_to_num(r[k])  # Convert quantity str to num 
+            # Get GPU device detail
+            gpus = item.metadata.annotations.get("GPUs")
+            if gpus==None:
+                r[gpu_devices_name] = ""
+            else:
+                r[gpu_devices_name] = gpus
             allocatable[item.metadata.name] = r
         return allocatable
     except ApiException as e:
